@@ -1,0 +1,10 @@
+#!/bin/sh
+# Set root password to iphoneSE
+(echo "iphoneSE"; echo "iphoneSE") | passwd root
+
+# Install language packs on first boot
+luci-index 2>/dev/null
+uci set luci.languages.ru='Русский'
+uci commit luci
+
+exit 0

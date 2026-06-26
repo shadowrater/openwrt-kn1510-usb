@@ -1,0 +1,49 @@
+name: Build OpenWrt KN-1510 with USB
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libncurses5-dev gawk python3 python3-distutils unzip rsync wget xz-utils zstd file
+
+      - name: Clone OpenWrt
+        run: |
+          git clone --depth=1 https://github.com/openwrt/openwrt.git
+          cd openwrt
+          git fetch --depth=1 origin main
+          git checkout main
+
+      - name: Apply modified DTS
+        run: |
+          cp ${{ github.workspace }}/target/linux/ramips/dts/mt7628an_keenetic_kn-1510.dts openwrt/target/linux/ramips/dts/mt7628an_keenetic_kn-1510.dts
+
+      - name: Configure
+        run: |
+          cd openwrt
+          echo "CONFIG_TARGET_ramips=y" > .config
+          echo "CONFIG_TARGET_ramips_mt76x8=y" >> .config
+          echo "CONFIG_TARGET_ramips_mt76x8_DEVICE_keenetic_kn-1510=y" >> .config
+          echo "CONFIG_PACKAGE_luci=y" >> .config
+          echo "CONFIG_PACKAGE_luci-i18n-base-ru=y" >> .config
+          make defconfig
+
+      - name: Build
+        run: |
+          cd openwrt
+          make -j$(nproc) 2>&1
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: openwrt-kn1510-usb
+          path: openwrt/bin/targets/ramips/mt76x8/openwrt-*-squashfs-sysupgrade.bin
