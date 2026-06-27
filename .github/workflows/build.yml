@@ -7,25 +7,29 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
       - name: Install deps
         run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential libncurses5-dev gawk python3 python3-distutils unzip rsync wget xz-utils zstd file
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq build-essential libncurses5-dev gawk python3 python3-distutils unzip rsync wget xz-utils zstd file 2>&1 | tail -5
 
       - name: Clone OpenWrt
         run: |
           git clone --depth=1 https://github.com/openwrt/openwrt.git
-          cd openwrt
-          git fetch --depth=1 origin main
-          git checkout main
+          ls -la openwrt/
 
-      - name: Apply modified DTS
+      - name: Apply DTS
         run: |
-          cp ${{ github.workspace }}/target/linux/ramips/dts/mt7628an_keenetic_kn-1510.dts openwrt/target/linux/ramips/dts/mt7628an_keenetic_kn-1510.dts
+          cp target/linux/ramips/dts/mt7628an_keenetic_kn-1510.dts openwrt/target/linux/ramips/dts/mt7628an_keenetic_kn-1510.dts
+          echo "DTS applied"
+
+      - name: Copy config files
+        run: |
+          cp -r files openwrt/
+          ls openwrt/files/
 
       - name: Configure
         run: |
@@ -35,12 +39,18 @@ jobs:
           echo "CONFIG_TARGET_ramips_mt76x8_DEVICE_keenetic_kn-1510=y" >> .config
           echo "CONFIG_PACKAGE_luci=y" >> .config
           echo "CONFIG_PACKAGE_luci-i18n-base-ru=y" >> .config
-          make defconfig
+          echo "CONFIG_PACKAGE_dropbear=y" >> .config
+          make defconfig 2>&1 | tail -10
 
       - name: Build
         run: |
           cd openwrt
-          make -j$(nproc) 2>&1
+          make -j$(nproc 2>/dev/null || echo 2) 2>&1 | tail -50
+
+      - name: List firmware
+        run: |
+          ls -la openwrt/bin/targets/ramips/mt76x8/*.bin 2>/dev/null || echo "No bin files found"
+          ls -la openwrt/bin/targets/ramips/mt76x8/ 2>/dev/null || echo "No target dir"
 
       - name: Upload firmware
         uses: actions/upload-artifact@v4
