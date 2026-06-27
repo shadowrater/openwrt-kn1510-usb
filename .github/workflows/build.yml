@@ -14,22 +14,16 @@ jobs:
       - name: Install deps
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq build-essential libncurses5-dev gawk python3 python3-distutils unzip rsync wget xz-utils zstd file 2>&1 | tail -5
+          sudo apt-get install -y -qq build-essential libncurses5-dev gawk python3 python3-distutils unzip rsync wget xz-utils zstd file 2>&1 | tail -3
 
       - name: Clone OpenWrt
-        run: |
-          git clone --depth=1 https://github.com/openwrt/openwrt.git
-          ls -la openwrt/
+        run: git clone --depth=1 https://github.com/openwrt/openwrt.git
 
       - name: Apply DTS
-        run: |
-          cp target/linux/ramips/dts/mt7628an_keenetic_kn-1510.dts openwrt/target/linux/ramips/dts/mt7628an_keenetic_kn-1510.dts
-          echo "DTS applied"
+        run: cp target/linux/ramips/dts/mt7628an_keenetic_kn-1510.dts openwrt/target/linux/ramips/dts/mt7628an_keenetic_kn-1510.dts
 
       - name: Copy config files
-        run: |
-          cp -r files openwrt/
-          ls openwrt/files/
+        run: cp -r files openwrt/
 
       - name: Configure
         run: |
@@ -40,17 +34,18 @@ jobs:
           echo "CONFIG_PACKAGE_luci=y" >> .config
           echo "CONFIG_PACKAGE_luci-i18n-base-ru=y" >> .config
           echo "CONFIG_PACKAGE_dropbear=y" >> .config
-          make defconfig 2>&1 | tail -10
+          echo "CONFIG_PACKAGE_kmod-usb-core=y" >> .config
+          echo "CONFIG_PACKAGE_kmod-usb2=y" >> .config
+          echo "CONFIG_PACKAGE_kmod-usb-ohci=y" >> .config
+          echo "CONFIG_PACKAGE_kmod-usb-ehci=y" >> .config
+          echo "CONFIG_PACKAGE_block-mount=y" >> .config
+          echo "CONFIG_PACKAGE_kmod-fs-ext4=y" >> .config
+          make defconfig 2>&1 | tail -5
 
       - name: Build
         run: |
           cd openwrt
-          make -j$(nproc 2>/dev/null || echo 2) 2>&1 | tail -50
-
-      - name: List firmware
-        run: |
-          ls -la openwrt/bin/targets/ramips/mt76x8/*.bin 2>/dev/null || echo "No bin files found"
-          ls -la openwrt/bin/targets/ramips/mt76x8/ 2>/dev/null || echo "No target dir"
+          make -j$(nproc 2>/dev/null || echo 2) 2>&1 | tail -20
 
       - name: Upload firmware
         uses: actions/upload-artifact@v4
