@@ -1,10 +1,19 @@
 #!/bin/sh
-# Set root password to iphoneSE
-(echo "iphoneSE"; echo "iphoneSE") | passwd root
+# Set root password to keenetic
+(echo "keenetic"; echo "keenetic") | passwd root
 
-# Install language packs on first boot
-luci-index 2>/dev/null
+# Set Russian language for LuCI
 uci set luci.languages.ru='Русский'
 uci commit luci
+
+# Update opkg feeds and install LuCI extras
+cat >> /etc/apk/repositories.d/customfeeds.list << EOF
+https://downloads.openwrt.org/snapshots/packages/mipsel_24kc/luci/packages.adb
+https://downloads.openwrt.org/snapshots/packages/mipsel_24kc/packages/packages.adb
+EOF
+
+# Enable and start services
+/etc/init.d/uhttpd enable 2>/dev/null
+/etc/init.d/uhttpd start 2>/dev/null
 
 exit 0
